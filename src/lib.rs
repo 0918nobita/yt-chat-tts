@@ -1,9 +1,12 @@
 mod sound_player;
 mod synthesis;
+mod youtube_chat;
 
 use actix::Actor;
 use sound_player::{SoundPlayerActor, SoundPlayerRequest};
 use synthesis::{SynthesisActor, SynthesisRequest};
+use tokio::sync::mpsc;
+use youtube_chat::{YouTubeChatActor, YouTubeChatMessage};
 
 pub fn event_loop(
     output_stream: rodio::OutputStream,
@@ -13,6 +16,10 @@ pub fn event_loop(
     let system = actix::System::new();
 
     system.block_on(async {
+        let (tx, mut rx) = mpsc::unbounded_channel::<YouTubeChatMessage>();
+
+        let _youtube_chat_addr = (YouTubeChatActor { sender: tx }).start();
+
         let synthesis_addr = SynthesisActor.start();
 
         let sound_player_addr = (SoundPlayerActor {
@@ -35,6 +42,14 @@ pub fn event_loop(
             .await
             .expect("Failed to send message to sound_player actor")
             .expect("Failed to play sound");
+
+        loop {
+            if let Some(v) = rx.recv().await {
+                println!("Got {:?}", v)
+            } else {
+                break;
+            }
+        }
     });
 
     system.run()

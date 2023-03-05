@@ -6,9 +6,10 @@ fn main() -> anyhow::Result<()> {
 
     let sink = rodio::Sink::try_new(&output_stream_handle)?;
 
-    event_loop(
-        output_stream,
-        output_stream_handle,
-        sink
-    ).context("Event loop stopped unexpectedly")
+    event_loop(output_stream, output_stream_handle, sink).context("Event loop stopped unexpectedly")
+
+    // tokio::runtime::Builder::new_current_thread()
+    //     .enable_all()
+    //     .build()?
+    //     .block_on(async { mpsc_example().await });
 }
