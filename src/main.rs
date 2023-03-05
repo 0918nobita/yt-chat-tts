@@ -1,8 +1,8 @@
 use anyhow::Context;
 use rodio::{source::Source, Decoder, OutputStream};
 use serde_json::Value as JsonValue;
-use std::fs::File;
-use std::io::BufReader;
+use std::io::Cursor;
+use yt_chat_tts::play_wav;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -15,7 +15,8 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let bytes = res.bytes().await?;
-    let json_str = std::str::from_utf8(bytes.as_ref())?;
+    let bytes = bytes.as_ref();
+    let json_str = std::str::from_utf8(bytes)?;
 
     let query_object: JsonValue = serde_json::from_str(json_str)?;
     let mut query_object = query_object
@@ -39,14 +40,11 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let out_wav = res.bytes().await?;
-
-    std::fs::write("out.wav", out_wav)?;
+    let out_wav = out_wav.to_vec();
 
     let (_stream, stream_handle) = OutputStream::try_default()?;
 
-    let file = BufReader::new(File::open("out.wav")?);
-
-    let source = Decoder::new(file)?;
+    let source = Decoder::new(Cursor::new(out_wav))?;
 
     stream_handle.play_raw(source.convert_samples())?;
 
