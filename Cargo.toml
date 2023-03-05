@@ -1,0 +1,24 @@
+[package]
+name = "yt-chat-tts"
+description = "YouTube ライブ配信のチャットを自動で読み上げる"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+rodio = "0.17.1"
+serde_json = "1"
+
+[dependencies.reqwest]
+version = "0.11"
+features = ["json"]
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.tokio]
+version = "1"
+features = ["full"]
