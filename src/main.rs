@@ -58,10 +58,12 @@ async fn main() -> anyhow::Result<()> {
 
         let client = reqwest::Client::new();
 
+        let youtube_api_key = config.youtube_api_key.as_str();
+
         let res = client
             .get("https://www.googleapis.com/youtube/v3/videos")
             .query(&[
-                ("key", config.youtube_api_key.as_str()),
+                ("key", youtube_api_key),
                 ("id", config.video_id.as_str()),
                 ("part", "liveStreamingDetails"),
             ])
@@ -78,8 +80,27 @@ async fn main() -> anyhow::Result<()> {
             panic!("Unexpected number of items");
         }
 
-        let live_chat_id = &data.items[0].live_streaming_details.active_live_chat_id;
-        println!("LiveChatID: {}", live_chat_id);
+        let live_chat_id = data.items[0]
+            .live_streaming_details
+            .active_live_chat_id
+            .as_str();
+
+        let res = client
+            .get("https://www.googleapis.com/youtube/v3/liveChat/messages")
+            .query(&[
+                ("key", youtube_api_key),
+                ("liveChatId", live_chat_id),
+                ("part", "id,snippet,authorDetails"),
+            ])
+            .send()
+            .await
+            .expect("Failed to send request");
+
+        let data = res
+            .json::<serde_json::Value>()
+            .await
+            .expect("Failed to parse response");
+        println!("{:?}", data);
     });
 
     while let Some(yt_chat_msg) = rx.recv().await {
