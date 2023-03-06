@@ -1,56 +1,41 @@
-mod sound_player;
-mod synthesis;
-mod youtube_chat;
+use anyhow::Context;
+use serde_json::Value as JsonValue;
 
-use actix::Actor;
-use sound_player::{SoundPlayerActor, SoundPlayerRequest};
-use synthesis::{SynthesisActor, SynthesisRequest};
-use tokio::sync::mpsc;
-use youtube_chat::{YouTubeChatActor, YouTubeChatMessage};
+/// VOICEVOX で音声合成する
+pub async fn request_audio_synthesis(text: &str) -> anyhow::Result<Vec<u8>> {
+    let client = reqwest::Client::new();
 
-pub fn event_loop(
-    output_stream: rodio::OutputStream,
-    output_stream_handle: rodio::OutputStreamHandle,
-    sink: rodio::Sink,
-) -> std::io::Result<()> {
-    let system = actix::System::new();
+    let res = client
+        .post("http://localhost:50021/audio_query")
+        .query(&[("text", text), ("speaker", "1")])
+        .send()
+        .await?;
 
-    system.block_on(async {
-        let (tx, mut rx) = mpsc::unbounded_channel::<YouTubeChatMessage>();
+    let bytes = res.bytes().await?;
+    let bytes = bytes.as_ref();
+    let json_str = std::str::from_utf8(bytes)?;
 
-        let _youtube_chat_addr = (YouTubeChatActor { sender: tx }).start();
+    let query_object: JsonValue = serde_json::from_str(json_str)?;
+    let mut query_object = query_object
+        .as_object()
+        .context("invalid query format")?
+        .clone();
 
-        let synthesis_addr = SynthesisActor.start();
+    query_object.insert(
+        "volumeScale".to_owned(),
+        JsonValue::Number(serde_json::Number::from_f64(2.0).unwrap()),
+    );
 
-        let sound_player_addr = (SoundPlayerActor {
-            output_stream,
-            output_stream_handle,
-            sink,
-        })
-        .start();
+    let query_object = JsonValue::Object(query_object).to_string();
 
-        let wav = synthesis_addr
-            .send(SynthesisRequest {
-                text: "こんにちは".to_owned(),
-            })
-            .await
-            .expect("Failed to send message to synthesis actor")
-            .expect("Failed to synthesize sound");
+    let res = client
+        .post("http://localhost:50021/synthesis")
+        .header("Content-Type", "application/json")
+        .query(&[("speaker", "1")])
+        .body(query_object)
+        .send()
+        .await?;
 
-        sound_player_addr
-            .send(SoundPlayerRequest { wav })
-            .await
-            .expect("Failed to send message to sound_player actor")
-            .expect("Failed to play sound");
-
-        loop {
-            if let Some(v) = rx.recv().await {
-                println!("Got {:?}", v)
-            } else {
-                break;
-            }
-        }
-    });
-
-    system.run()
+    let out_wav = res.bytes().await?;
+    Ok(out_wav.to_vec())
 }
