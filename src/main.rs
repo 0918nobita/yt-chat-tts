@@ -33,6 +33,34 @@ struct YTVideoListResponse {
     items: Vec<YTVideoInfo>,
 }
 
+#[derive(Debug, Deserialize)]
+struct YTAuthorDetails {
+    #[serde(rename(deserialize = "displayName"))]
+    display_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct YTSnippet {
+    #[serde(rename(deserialize = "displayMessage"))]
+    display_message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct YTLiveChatMessage {
+    #[serde(rename(deserialize = "authorDetails"))]
+    author_details: YTAuthorDetails,
+
+    snippet: YTSnippet,
+}
+
+#[derive(Debug, Deserialize)]
+struct YTLiveChatMessageListResponse {
+    items: Vec<YTLiveChatMessage>,
+
+    #[serde(rename(deserialize = "nextPageToken"))]
+    next_page_token: String,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = envy::from_env::<Config>().expect("Failed to load config");
@@ -44,18 +72,6 @@ async fn main() -> anyhow::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<YouTubeChatMessage>();
 
     tokio::spawn(async move {
-        // tx.send(YouTubeChatMessage {
-        //     text: "こんにちは".to_owned(),
-        // })
-        // .unwrap();
-
-        // tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-
-        // tx.send(YouTubeChatMessage {
-        //     text: "こんばんは".to_owned(),
-        // })
-        // .unwrap();
-
         let client = reqwest::Client::new();
 
         let youtube_api_key = config.youtube_api_key.as_str();
@@ -97,9 +113,10 @@ async fn main() -> anyhow::Result<()> {
             .expect("Failed to send request");
 
         let data = res
-            .json::<serde_json::Value>()
+            .json::<YTLiveChatMessageListResponse>()
             .await
             .expect("Failed to parse response");
+
         println!("{:?}", data);
     });
 
