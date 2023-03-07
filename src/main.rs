@@ -5,13 +5,8 @@ use serde::Deserialize;
 use tokio::sync::mpsc;
 use yt_chat_tts::{
     display_live_chat_message_list_response, fetch_incoming_live_chat_messages,
-    request_audio_synthesis, Config,
+    request_audio_synthesis, send_live_chat_messages, Config, YTChatMessage,
 };
-
-#[derive(Debug)]
-struct YouTubeChatMessage {
-    text: String,
-}
 
 #[derive(Debug, Deserialize)]
 struct YTLiveStreamingDetails {
@@ -38,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     let sink = rodio::Sink::try_new(&output_stream_handle)?;
 
-    let (tx, mut rx) = mpsc::unbounded_channel::<YouTubeChatMessage>();
+    let (tx, mut rx) = mpsc::unbounded_channel::<YTChatMessage>();
 
     tokio::spawn(async move {
         let client = reqwest::Client::new();
@@ -85,6 +80,8 @@ async fn main() -> anyhow::Result<()> {
 
             display_live_chat_message_list_response(&data);
 
+            send_live_chat_messages(&tx, &data);
+
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         }
     });
@@ -97,8 +94,6 @@ async fn main() -> anyhow::Result<()> {
 
         let source = Decoder::new(Cursor::new(wav))?;
         sink.append(source.convert_samples::<f32>());
-
-        sink.sleep_until_end();
     }
 
     Ok(())

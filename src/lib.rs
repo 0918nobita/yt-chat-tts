@@ -114,3 +114,25 @@ pub fn display_live_chat_message_list_response(response: &YTLiveChatMessageListR
         )
     }
 }
+
+#[derive(Debug)]
+pub struct YTChatMessage {
+    pub text: String,
+}
+
+pub fn send_live_chat_messages(
+    tx: &tokio::sync::mpsc::UnboundedSender<YTChatMessage>,
+    response: &YTLiveChatMessageListResponse,
+) {
+    for item in &response.items {
+        let author = item.author_details.display_name.as_str();
+
+        let text = item.snippet.display_message.as_str();
+
+        let yt_chat_message = YTChatMessage {
+            text: format!("{} さん、{}", author, text),
+        };
+
+        tx.send(yt_chat_message).unwrap();
+    }
+}
