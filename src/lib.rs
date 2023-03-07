@@ -1,5 +1,12 @@
 use anyhow::Context;
+use serde::Deserialize;
 use serde_json::Value as JsonValue;
+
+#[derive(Deserialize)]
+pub struct Config {
+    pub video_id: String,
+    pub youtube_api_key: String,
+}
 
 /// VOICEVOX で音声合成する
 pub async fn request_audio_synthesis(text: &str) -> anyhow::Result<Vec<u8>> {
@@ -38,4 +45,72 @@ pub async fn request_audio_synthesis(text: &str) -> anyhow::Result<Vec<u8>> {
 
     let out_wav = res.bytes().await?;
     Ok(out_wav.to_vec())
+}
+
+#[derive(Debug, Deserialize)]
+struct YTAuthorDetails {
+    #[serde(rename(deserialize = "displayName"))]
+    display_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct YTSnippet {
+    #[serde(rename(deserialize = "displayMessage"))]
+    display_message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct YTLiveChatMessage {
+    #[serde(rename(deserialize = "authorDetails"))]
+    author_details: YTAuthorDetails,
+
+    snippet: YTSnippet,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct YTLiveChatMessageListResponse {
+    items: Vec<YTLiveChatMessage>,
+
+    #[serde(rename(deserialize = "nextPageToken"))]
+    pub next_page_token: String,
+}
+
+pub async fn fetch_incoming_live_chat_messages(
+    client: &reqwest::Client,
+    config: &Config,
+    live_chat_id: &str,
+    page_token: Option<&str>,
+) -> YTLiveChatMessageListResponse {
+    let mut query: Vec<(&str, &str)> = vec![
+        ("key", config.youtube_api_key.as_str()),
+        ("liveChatId", live_chat_id),
+        ("part", "id,snippet,authorDetails"),
+    ];
+
+    if let Some(page_token) = page_token {
+        query.push(("pageToken", page_token));
+    }
+
+    let res = client
+        .get("https://www.googleapis.com/youtube/v3/liveChat/messages")
+        .query(&query)
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    res.json::<YTLiveChatMessageListResponse>()
+        .await
+        .expect("Failed to deserialize response")
+}
+
+pub fn display_live_chat_message_list_response(response: &YTLiveChatMessageListResponse) {
+    println!("-----");
+
+    for item in &response.items {
+        println!(
+            "{}: {}",
+            item.author_details.display_name.as_str(),
+            item.snippet.display_message.as_str()
+        )
+    }
 }

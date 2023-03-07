@@ -3,17 +3,14 @@ use std::io::Cursor;
 use rodio::{Decoder, Source};
 use serde::Deserialize;
 use tokio::sync::mpsc;
-use yt_chat_tts::request_audio_synthesis;
+use yt_chat_tts::{
+    display_live_chat_message_list_response, fetch_incoming_live_chat_messages,
+    request_audio_synthesis, Config,
+};
 
 #[derive(Debug)]
 struct YouTubeChatMessage {
     text: String,
-}
-
-#[derive(Deserialize)]
-struct Config {
-    video_id: String,
-    youtube_api_key: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,34 +28,6 @@ struct YTVideoInfo {
 #[derive(Debug, Deserialize)]
 struct YTVideoListResponse {
     items: Vec<YTVideoInfo>,
-}
-
-#[derive(Debug, Deserialize)]
-struct YTAuthorDetails {
-    #[serde(rename(deserialize = "displayName"))]
-    display_name: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct YTSnippet {
-    #[serde(rename(deserialize = "displayMessage"))]
-    display_message: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct YTLiveChatMessage {
-    #[serde(rename(deserialize = "authorDetails"))]
-    author_details: YTAuthorDetails,
-
-    snippet: YTSnippet,
-}
-
-#[derive(Debug, Deserialize)]
-struct YTLiveChatMessageListResponse {
-    items: Vec<YTLiveChatMessage>,
-
-    #[serde(rename(deserialize = "nextPageToken"))]
-    next_page_token: String,
 }
 
 #[tokio::main]
@@ -101,23 +70,23 @@ async fn main() -> anyhow::Result<()> {
             .active_live_chat_id
             .as_str();
 
-        let res = client
-            .get("https://www.googleapis.com/youtube/v3/liveChat/messages")
-            .query(&[
-                ("key", youtube_api_key),
-                ("liveChatId", live_chat_id),
-                ("part", "id,snippet,authorDetails"),
-            ])
-            .send()
-            .await
-            .expect("Failed to send request");
+        let mut next_page_token: Option<String> = None;
 
-        let data = res
-            .json::<YTLiveChatMessageListResponse>()
-            .await
-            .expect("Failed to parse response");
+        loop {
+            let data = fetch_incoming_live_chat_messages(
+                &client,
+                &config,
+                live_chat_id,
+                next_page_token.as_deref(),
+            )
+            .await;
 
-        println!("{:?}", data);
+            next_page_token = Some(data.next_page_token.clone());
+
+            display_live_chat_message_list_response(&data);
+
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        }
     });
 
     while let Some(yt_chat_msg) = rx.recv().await {
