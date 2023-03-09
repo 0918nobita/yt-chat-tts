@@ -11,6 +11,7 @@ anyhow = "1.0"
 envy = "0.4"
 rodio = "0.17.1"
 serde_json = "1"
+thiserror = "1.0.39"
 
 [dependencies.reqwest]
 version = "0.11"

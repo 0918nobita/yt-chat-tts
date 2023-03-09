@@ -1,20 +1,30 @@
-pub mod audio_device;
+mod audio_device;
+mod youtube_api;
 
+use crate::youtube_api::{
+    fetch_live_chat_messages, fetch_video_list_with_live_streaming_details, YTApiKey, YTLiveChatId,
+    YTVideoId,
+};
 use anyhow::Context;
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
+use thiserror::Error;
+use tokio::sync::mpsc;
+
+pub use crate::audio_device::AudioDevice;
 
 #[derive(Deserialize)]
 pub struct Config {
-    pub video_id: String,
-    pub youtube_api_key: String,
+    pub video_id: YTVideoId,
+    pub youtube_api_key: YTApiKey,
 }
 
 /// VOICEVOX で音声合成する
-pub async fn request_audio_synthesis(text: &str) -> anyhow::Result<Vec<u8>> {
-    let client = reqwest::Client::new();
-
-    let res = client
+pub async fn request_audio_synthesis(
+    http_client: &reqwest::Client,
+    text: &str,
+) -> anyhow::Result<Vec<u8>> {
+    let res = http_client
         .post("http://localhost:50021/audio_query")
         .query(&[("text", text), ("speaker", "1")])
         .send()
@@ -37,7 +47,7 @@ pub async fn request_audio_synthesis(text: &str) -> anyhow::Result<Vec<u8>> {
 
     let query_object = JsonValue::Object(query_object).to_string();
 
-    let res = client
+    let res = http_client
         .post("http://localhost:50021/synthesis")
         .header("Content-Type", "application/json")
         .query(&[("speaker", "1")])
@@ -49,92 +59,85 @@ pub async fn request_audio_synthesis(text: &str) -> anyhow::Result<Vec<u8>> {
     Ok(out_wav.to_vec())
 }
 
-#[derive(Debug, Deserialize)]
-struct YTAuthorDetails {
-    #[serde(rename(deserialize = "displayName"))]
-    display_name: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct YTSnippet {
-    #[serde(rename(deserialize = "displayMessage"))]
-    display_message: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct YTLiveChatMessage {
-    #[serde(rename(deserialize = "authorDetails"))]
-    author_details: YTAuthorDetails,
-
-    snippet: YTSnippet,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct YTLiveChatMessageListResponse {
-    items: Vec<YTLiveChatMessage>,
-
-    #[serde(rename(deserialize = "nextPageToken"))]
-    pub next_page_token: String,
-}
-
-pub async fn fetch_incoming_live_chat_messages(
-    client: &reqwest::Client,
-    config: &Config,
-    live_chat_id: &str,
-    page_token: Option<&str>,
-) -> YTLiveChatMessageListResponse {
-    let mut query: Vec<(&str, &str)> = vec![
-        ("key", config.youtube_api_key.as_str()),
-        ("liveChatId", live_chat_id),
-        ("part", "id,snippet,authorDetails"),
-    ];
-
-    if let Some(page_token) = page_token {
-        query.push(("pageToken", page_token));
-    }
-
-    let res = client
-        .get("https://www.googleapis.com/youtube/v3/liveChat/messages")
-        .query(&query)
-        .send()
-        .await
-        .expect("Failed to send request");
-
-    res.json::<YTLiveChatMessageListResponse>()
-        .await
-        .expect("Failed to deserialize response")
-}
-
-pub fn display_live_chat_message_list_response(response: &YTLiveChatMessageListResponse) {
-    println!("-----");
-
-    for item in &response.items {
-        println!(
-            "{}: {}",
-            item.author_details.display_name.as_str(),
-            item.snippet.display_message.as_str()
-        )
-    }
-}
-
 #[derive(Debug)]
-pub struct YTChatMessage {
+pub struct ChatMessage {
     pub text: String,
 }
 
-pub fn send_live_chat_messages(
-    tx: &tokio::sync::mpsc::UnboundedSender<YTChatMessage>,
-    response: &YTLiveChatMessageListResponse,
-) {
-    for item in &response.items {
-        let author = item.author_details.display_name.as_str();
+#[derive(Debug, Error)]
+pub enum LiveChatMessageSubscriptionError {
+    #[error("Chat ID not found")]
+    ChatIdNotFound,
 
-        let text = item.snippet.display_message.as_str();
+    #[error("Multiple chat IDs found")]
+    MultipleChatIdsFound,
 
-        let yt_chat_message = YTChatMessage {
-            text: format!("{} さん、{}", author, text),
-        };
+    #[error(transparent)]
+    ApiError(#[from] youtube_api::YTError),
+}
 
-        tx.send(yt_chat_message).unwrap();
+pub async fn subscribe_live_chat_messages(
+    http_client: &reqwest::Client,
+    config: &Config,
+    tx: &mpsc::UnboundedSender<ChatMessage>,
+) -> Result<(), LiveChatMessageSubscriptionError> {
+    let video_list_res = fetch_video_list_with_live_streaming_details(
+        http_client,
+        &config.youtube_api_key,
+        &config.video_id,
+    )
+    .await?;
+
+    if video_list_res.items.len() > 1 {
+        return Err(LiveChatMessageSubscriptionError::MultipleChatIdsFound);
+    }
+
+    let Some(video_info) = video_list_res.items.get(0) else {
+        return Err(LiveChatMessageSubscriptionError::ChatIdNotFound);
+    };
+
+    let live_chat_id = YTLiveChatId(
+        video_info
+            .live_streaming_details
+            .active_live_chat_id
+            .clone(),
+    );
+
+    let mut page_token: Option<String> = None;
+
+    loop {
+        let incoming_live_chat_messages = fetch_live_chat_messages(
+            http_client,
+            &config.youtube_api_key,
+            &live_chat_id,
+            page_token.as_deref(),
+        )
+        .await?;
+
+        page_token = Some(incoming_live_chat_messages.next_page_token.clone());
+
+        println!("-----");
+
+        for item in &incoming_live_chat_messages.items {
+            println!(
+                "{}: {}",
+                item.author_details.display_name.as_str(),
+                item.snippet.display_message.as_str()
+            )
+        }
+
+        for item in &incoming_live_chat_messages.items {
+            let author = item.author_details.display_name.as_str();
+
+            let text = item.snippet.display_message.as_str();
+
+            let yt_chat_message = ChatMessage {
+                text: format!("{}さん、{}", author, text),
+            };
+
+            tx.send(yt_chat_message).unwrap();
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
     }
 }
