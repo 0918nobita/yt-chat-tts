@@ -1,3 +1,5 @@
+pub mod audio_device;
+
 use anyhow::Context;
 use serde::Deserialize;
 use serde_json::Value as JsonValue;

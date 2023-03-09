@@ -1,6 +1,3 @@
-use std::io::Cursor;
-
-use rodio::{Decoder, Source};
 use serde::Deserialize;
 use tokio::sync::mpsc;
 use yt_chat_tts::{
@@ -29,9 +26,7 @@ struct YTVideoListResponse {
 async fn main() -> anyhow::Result<()> {
     let config = envy::from_env::<Config>().expect("Failed to load config");
 
-    let (_output_stream, output_stream_handle) = rodio::OutputStream::try_default()?;
-
-    let sink = rodio::Sink::try_new(&output_stream_handle)?;
+    let audio_device = yt_chat_tts::audio_device::AudioDevice::try_default()?;
 
     let (tx, mut rx) = mpsc::unbounded_channel::<YTChatMessage>();
 
@@ -87,13 +82,8 @@ async fn main() -> anyhow::Result<()> {
     });
 
     while let Some(yt_chat_msg) = rx.recv().await {
-        println!("Got {:?}", yt_chat_msg);
-
         let wav = request_audio_synthesis(&yt_chat_msg.text).await?;
-        println!("Audio synthesis for {:?} succeeded", yt_chat_msg);
-
-        let source = Decoder::new(Cursor::new(wav))?;
-        sink.append(source.convert_samples::<f32>());
+        audio_device.append_wav(wav)?;
     }
 
     Ok(())
