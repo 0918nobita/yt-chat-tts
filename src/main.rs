@@ -18,11 +18,11 @@ async fn main() -> anyhow::Result<()> {
     let http_client_cloned = http_client.clone();
 
     tokio::spawn(
-        async move { subscribe_live_chat_messages(&*http_client_cloned, &config, &tx).await },
+        async move { subscribe_live_chat_messages(&http_client_cloned, &config, &tx).await },
     );
 
     while let Some(yt_chat_msg) = rx.recv().await {
-        let wav = request_audio_synthesis(&*http_client, &yt_chat_msg.text).await?;
+        let wav = request_audio_synthesis(&http_client, &yt_chat_msg.text).await?;
         audio_device.append_wav(wav)?;
     }
 

@@ -16,16 +16,16 @@ pub struct YTLiveChatId(pub String);
 #[derive(Debug, Error)]
 pub enum YTError {
     #[error("Failed to request chat ID: {0}")]
-    FailedToRequestChatId(reqwest::Error),
+    ChatIdRequest(reqwest::Error),
 
     #[error("Failed to decode chat ID: {0}")]
-    FailedToDecodeChatId(reqwest::Error),
+    ChatIdDecode(reqwest::Error),
 
     #[error("Failed to request live chat message list: {0}")]
-    FailedToRequestLiveChatMessageList(reqwest::Error),
+    LiveChatMessageListRequest(reqwest::Error),
 
     #[error("Failed to decode live chat message list: {0}")]
-    FailedToDecodeLiveChatMessageList(reqwest::Error),
+    LiveChatMessageListDecode(reqwest::Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,10 +60,10 @@ pub async fn fetch_video_list_with_live_streaming_details(
         ])
         .send()
         .await
-        .map_err(|err| YTError::FailedToRequestChatId(err))?
+        .map_err(YTError::ChatIdRequest)?
         .json::<YTVideoListResponse>()
         .await
-        .map_err(|err| YTError::FailedToDecodeChatId(err))
+        .map_err(YTError::ChatIdDecode)
 }
 
 /// チャットメッセージの投稿者に関する情報
@@ -125,8 +125,8 @@ pub async fn fetch_live_chat_messages(
         .query(&query)
         .send()
         .await
-        .map_err(|err| YTError::FailedToRequestLiveChatMessageList(err))?
+        .map_err(YTError::LiveChatMessageListRequest)?
         .json::<YTLiveChatMessageListResponse>()
         .await
-        .map_err(|err| YTError::FailedToDecodeLiveChatMessageList(err))
+        .map_err(YTError::LiveChatMessageListDecode)
 }
