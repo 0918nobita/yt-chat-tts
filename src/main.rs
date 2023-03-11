@@ -26,12 +26,15 @@ async fn main() -> anyhow::Result<()> {
 
     let http_client_cloned = http_client.clone();
 
+    let now = chrono::Local::now();
+
     tokio::spawn(async move {
         subscribe_live_chat_messages(
             &http_client_cloned,
             &config.youtube_api_key,
             &config.video_id,
             &tx,
+            &now,
         )
         .await
     });

@@ -30,6 +30,7 @@ pub async fn subscribe_live_chat_messages(
     youtube_api_key: &YTApiKey,
     video_id: &YTVideoId,
     tx: &mpsc::UnboundedSender<ChatMessage>,
+    published_after: &chrono::DateTime<chrono::Local>,
 ) -> Result<(), LiveChatMessageSubscriptionError> {
     let video_list_res =
         fetch_video_list_with_live_streaming_details(http_client, youtube_api_key, video_id)
@@ -53,7 +54,7 @@ pub async fn subscribe_live_chat_messages(
     let mut page_token: Option<String> = None;
 
     loop {
-        let incoming_live_chat_messages = fetch_live_chat_messages(
+        let res = fetch_live_chat_messages(
             http_client,
             youtube_api_key,
             &live_chat_id,
@@ -61,11 +62,17 @@ pub async fn subscribe_live_chat_messages(
         )
         .await?;
 
-        page_token = Some(incoming_live_chat_messages.next_page_token.clone());
+        page_token = Some(res.next_page_token.clone());
+
+        let incoming_live_chat_messages = res
+            .items
+            .iter()
+            .filter(|item| item.snippet.published_at >= *published_after)
+            .collect::<Vec<_>>();
 
         println!("-----");
 
-        for item in &incoming_live_chat_messages.items {
+        for item in &incoming_live_chat_messages {
             println!(
                 "{}: {}",
                 item.author_details.display_name.as_str(),
@@ -73,7 +80,7 @@ pub async fn subscribe_live_chat_messages(
             )
         }
 
-        for item in &incoming_live_chat_messages.items {
+        for item in &incoming_live_chat_messages {
             let author = item.author_details.display_name.as_str();
 
             let text = item.snippet.display_message.as_str();
