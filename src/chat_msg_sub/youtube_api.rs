@@ -79,6 +79,9 @@ pub struct YTAuthorDetails {
 pub struct YTSnippet {
     #[serde(rename(deserialize = "displayMessage"))]
     pub display_message: String,
+
+    #[serde(rename(deserialize = "publishedAt"))]
+    pub published_at: chrono::DateTime<chrono::Local>,
 }
 
 /// チャットメッセージ
@@ -120,7 +123,7 @@ pub async fn fetch_live_chat_messages(
         query.push(("pageToken", page_token));
     }
 
-    http_client
+    let res = http_client
         .get("https://www.googleapis.com/youtube/v3/liveChat/messages")
         .query(&query)
         .send()
@@ -128,5 +131,9 @@ pub async fn fetch_live_chat_messages(
         .map_err(YTError::LiveChatMessageListRequest)?
         .json::<YTLiveChatMessageListResponse>()
         .await
-        .map_err(YTError::LiveChatMessageListDecode)
+        .map_err(YTError::LiveChatMessageListDecode)?;
+
+    println!("{:?}", res);
+
+    Ok(res)
 }
