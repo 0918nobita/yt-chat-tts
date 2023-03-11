@@ -1,8 +1,16 @@
+use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use yt_chat_tts::{
-    request_audio_synthesis, subscribe_live_chat_messages, AudioDevice, ChatMessage, Config,
+    request_audio_synthesis, subscribe_live_chat_messages, AudioDevice, ChatMessage, YTApiKey,
+    YTVideoId,
 };
+
+#[derive(Deserialize)]
+pub struct Config {
+    pub video_id: YTVideoId,
+    pub youtube_api_key: YTApiKey,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -17,9 +25,15 @@ async fn main() -> anyhow::Result<()> {
 
     let http_client_cloned = http_client.clone();
 
-    tokio::spawn(
-        async move { subscribe_live_chat_messages(&http_client_cloned, &config, &tx).await },
-    );
+    tokio::spawn(async move {
+        subscribe_live_chat_messages(
+            &http_client_cloned,
+            &config.youtube_api_key,
+            &config.video_id,
+            &tx,
+        )
+        .await
+    });
 
     while let Some(yt_chat_msg) = rx.recv().await {
         let wav = request_audio_synthesis(&http_client, &yt_chat_msg.text).await?;
