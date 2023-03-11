@@ -16,7 +16,8 @@ pub struct Config {
 async fn main() -> anyhow::Result<()> {
     let config = envy::from_env::<Config>()?;
 
-    let audio_device = AudioDevice::try_default()?;
+    let (_handle, audio_device) = AudioDevice::try_default()?;
+    let audio_device = Arc::new(audio_device);
 
     // 読み上げるべきメッセージを通知するためのチャネル
     let (tx, mut rx) = mpsc::unbounded_channel::<ChatMessage>();
@@ -36,8 +37,17 @@ async fn main() -> anyhow::Result<()> {
     });
 
     while let Some(yt_chat_msg) = rx.recv().await {
-        let wav = request_audio_synthesis(&http_client, &yt_chat_msg.text).await?;
-        audio_device.append_wav(wav)?;
+        let http_client = Arc::clone(&http_client);
+
+        let audio_device_cloned = Arc::clone(&audio_device);
+
+        tokio::spawn(async move {
+            // TODO: エラーをメインスレッドに通知したりロギングしたりする仕組みが必要
+            let wav = request_audio_synthesis(&http_client, &yt_chat_msg.text)
+                .await
+                .unwrap();
+            audio_device_cloned.append_wav(wav).unwrap();
+        });
     }
 
     Ok(())

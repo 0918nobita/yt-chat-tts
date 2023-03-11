@@ -2,24 +2,29 @@ use anyhow::Context;
 use rodio::Source;
 
 pub struct AudioDevice {
-    _output_stream: rodio::OutputStream,
-    _output_stream_handle: rodio::OutputStreamHandle,
     sink: rodio::Sink,
 }
 
+pub struct AudioDeviceHandle {
+    _output_stream: rodio::OutputStream,
+    _output_stream_handle: rodio::OutputStreamHandle,
+}
+
 impl AudioDevice {
-    pub fn try_default() -> anyhow::Result<Self> {
+    pub fn try_default() -> anyhow::Result<(AudioDeviceHandle, Self)> {
         let (output_stream, output_stream_handle) =
             rodio::OutputStream::try_default().context("Failed to detect default audio device")?;
 
         let sink =
             rodio::Sink::try_new(&output_stream_handle).context("Failed to create audio sink")?;
 
-        Ok(Self {
-            _output_stream: output_stream,
-            _output_stream_handle: output_stream_handle,
-            sink,
-        })
+        Ok((
+            AudioDeviceHandle {
+                _output_stream: output_stream,
+                _output_stream_handle: output_stream_handle,
+            },
+            Self { sink },
+        ))
     }
 
     pub fn append_wav(&self, wav_to_play: Vec<u8>) -> anyhow::Result<()> {
