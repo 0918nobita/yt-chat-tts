@@ -1,0 +1,9 @@
+[package]
+name = "yt-chat-tts-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kodai Matsumoto <nobita.0918@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/0918nobita/yt-chat-tts.git"
+
+[dependencies]

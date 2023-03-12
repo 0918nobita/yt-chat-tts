@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing_subscriber::fmt::format::FmtSpan;
-use yt_chat_tts::{
+use yt_chat_tts_cli::{
     request_audio_synthesis, subscribe_live_chat_messages, AudioDevice, ChatMessage, YTApiKey,
     YTVideoId,
 };

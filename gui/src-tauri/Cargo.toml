@@ -1,10 +1,9 @@
 [package]
 name = "yt-chat-tts-gui"
-version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+version = "0.1.0"
+authors = ["Kodai Matsumoto <nobita.0918@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/0918nobita/yt-chat-tts.git"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -16,6 +15,7 @@ tauri-build = { version = "1.2", features = [] }
 tauri = { version = "1.2", features = ["config-toml", "shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+yt-chat-tts-core = { path = "../../core" }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

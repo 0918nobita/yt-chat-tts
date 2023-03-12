@@ -1,0 +1,33 @@
+[package]
+name = "yt-chat-tts-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kodai Matsumoto <nobita.0918@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/0918nobita/yt-chat-tts.git"
+
+[dependencies]
+anyhow = "1.0"
+envy = "0.4"
+rodio = "0.17.1"
+serde_json = "1"
+thiserror = "1.0.39"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+yt-chat-tts-core = { path = "../core" }
+
+[dependencies.chrono]
+version = "0.4.23"
+features = ["serde"]
+
+[dependencies.reqwest]
+version = "0.11"
+features = ["json"]
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.tokio]
+version = "1"
+features = ["full"]
