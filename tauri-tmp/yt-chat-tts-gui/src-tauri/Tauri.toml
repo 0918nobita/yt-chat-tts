@@ -1,0 +1,38 @@
+[build]
+before-dev-command = "pnpm dev"
+before-build-command = "pnpm build"
+dev-path = "http://localhost:1420"
+dist-dir = "../dist"
+with-global-tauri = true
+
+[package]
+product-name = "yt-chat-tts-gui"
+version = "0.1.0"
+
+[tauri.allowlist]
+all = false
+shell = { all = false, open = true }
+
+[tauri.bundle]
+active = true
+icon = [
+    "icons/32x32.png",
+    "icons/128x128.png",
+    "icons/128x128@2x.png",
+    "icons/icon.icns",
+    "icons/icon.ico",
+]
+identifier = "com.github.zero918nobita"
+targets = "all"
+
+[tauri.security]
+
+[tauri.updater]
+active = false
+
+[[tauri.windows]]
+fullscreen = false
+resizable = true
+title = "YouTube Chat TTS (GUI)"
+width = 800
+height = 600
