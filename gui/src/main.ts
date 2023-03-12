@@ -1,21 +1,17 @@
 import { invoke } from "@tauri-apps/api/tauri";
 
-let greetInputEl: HTMLInputElement | null;
-let greetMsgEl: HTMLElement | null;
+import { Elm } from "./Main.elm";
 
-async function greet() {
-  if (greetMsgEl && greetInputEl) {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    greetMsgEl.textContent = await invoke("greet", {
-      name: greetInputEl.value,
-    });
-  }
-}
+const app = Elm.Main.init({
+  node: document.getElementById("root")!,
+});
 
-window.addEventListener("DOMContentLoaded", () => {
-  greetInputEl = document.querySelector("#greet-input");
-  greetMsgEl = document.querySelector("#greet-msg");
-  document
-    .querySelector("#greet-button")
-    ?.addEventListener("click", () => greet());
+app.ports.greet.subscribe((yourName) => {
+  void invoke("greet", { name: yourName }).then((message) => {
+    if (typeof message !== "string") {
+      throw new Error("Expected string: greet port");
+    }
+
+    app.ports.messageReceiver.send(message);
+  });
 });

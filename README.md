@@ -15,7 +15,10 @@ $ cargo run --bin yt-chat-tts-cli
 
 ## GUI 版の起動方法
 
+[asdf](https://asdf-vm.com/) がインストールされていることを前提としています。
+
 ```bash
+asdf install
 cd gui
 pnpm install
 pnpm tauri dev

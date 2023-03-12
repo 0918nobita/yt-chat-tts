@@ -7,14 +7,18 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "format": "elm-format src/"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.2.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.2.2",
-    "vite": "^4.0.0",
-    "typescript": "^4.8.2"
+    "@tauri-apps/cli": "1.2.2",
+    "elm": "0.19.1-5",
+    "elm-format": "0.8.6",
+    "typescript": "4.8.2",
+    "vite": "4.0.0",
+    "vite-plugin-elm": "2.7.2"
   }
 }

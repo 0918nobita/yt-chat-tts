@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { plugin as elmPlugin } from "vite-plugin-elm";
 
 const mobile =
   process.env.TAURI_PLATFORM === "android" ||
@@ -6,6 +7,8 @@ const mobile =
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
+  plugins: [elmPlugin({ debug: false, optimize: true })],
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   // prevent vite from obscuring rust errors
   clearScreen: false,
