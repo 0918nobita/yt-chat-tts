@@ -1,6 +1,6 @@
 # YouTube ライブ配信のチャットを読み上げるツール
 
-## 起動方法
+## CLI 版の起動方法
 
 ### 環境変数
 
@@ -10,5 +10,13 @@
 GUI 版の VOICEVOX を起動したうえで、以下のコマンドを実行してください。
 
 ```bash
-$ cargo run
+$ cargo run --bin yt-chat-tts-cli
+```
+
+## GUI 版の起動方法
+
+```bash
+cd gui
+pnpm install
+pnpm tauri dev
 ```
