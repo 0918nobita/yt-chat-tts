@@ -11,6 +11,7 @@ pub struct AudioDeviceHandle {
 }
 
 impl AudioDevice {
+    #[tracing::instrument(name = "Try to detect default audio device")]
     pub fn try_default() -> anyhow::Result<(AudioDeviceHandle, Self)> {
         let (output_stream, output_stream_handle) =
             rodio::OutputStream::try_default().context("Failed to detect default audio device")?;
@@ -27,6 +28,10 @@ impl AudioDevice {
         ))
     }
 
+    #[tracing::instrument(
+        name = "Append wave data to the sink of default audio device",
+        skip(self, wav_to_play)
+    )]
     pub fn append_wav(&self, wav_to_play: Vec<u8>) -> anyhow::Result<()> {
         let decoder = rodio::Decoder::new(std::io::Cursor::new(wav_to_play))?;
 

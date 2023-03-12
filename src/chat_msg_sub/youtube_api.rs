@@ -6,10 +6,11 @@ use thiserror::Error;
 pub struct YTApiKey(String);
 
 /// 動画 ID
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct YTVideoId(String);
 
 /// チャット ID
+#[derive(Debug)]
 pub struct YTLiveChatId(pub String);
 
 /// YouTube Data API v3 の呼び出し時に発生するエラー
@@ -46,6 +47,10 @@ pub struct YTVideoListResponse {
 }
 
 /// 動画 ID をもとに生配信の情報付きの動画リストを取得する
+#[tracing::instrument(
+    name = "Fetch video list with live streaming details",
+    skip(http_client, api_key)
+)]
 pub async fn fetch_video_list_with_live_streaming_details(
     http_client: &reqwest::Client,
     api_key: &YTApiKey,
@@ -107,6 +112,7 @@ pub struct YTLiveChatMessageListResponse {
 }
 
 /// ライブ配信のチャットメッセージのリストを取得する
+#[tracing::instrument(name = "Fetch live chat messages", skip(http_client, api_key))]
 pub async fn fetch_live_chat_messages(
     http_client: &reqwest::Client,
     api_key: &YTApiKey,

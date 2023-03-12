@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::mpsc;
+use tracing_subscriber::fmt::format::FmtSpan;
 use yt_chat_tts::{
     request_audio_synthesis, subscribe_live_chat_messages, AudioDevice, ChatMessage, YTApiKey,
     YTVideoId,
@@ -14,6 +15,10 @@ pub struct Config {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .init();
+
     let config = envy::from_env::<Config>()?;
 
     let (_handle, audio_device) = AudioDevice::try_default()?;

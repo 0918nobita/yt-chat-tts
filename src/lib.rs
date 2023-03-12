@@ -10,6 +10,7 @@ pub use crate::{
 };
 
 /// VOICEVOX で音声合成する
+#[tracing::instrument(name = "Request audio synthesis", skip(http_client))]
 pub async fn request_audio_synthesis(
     http_client: &reqwest::Client,
     text: &str,

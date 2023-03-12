@@ -25,6 +25,10 @@ pub enum LiveChatMessageSubscriptionError {
     ApiError(#[from] youtube_api::YTError),
 }
 
+#[tracing::instrument(
+    name = "Subscribe live chat messages",
+    skip(http_client, youtube_api_key, tx)
+)]
 pub async fn subscribe_live_chat_messages(
     http_client: &reqwest::Client,
     youtube_api_key: &YTApiKey,
@@ -69,16 +73,6 @@ pub async fn subscribe_live_chat_messages(
             .iter()
             .filter(|item| item.snippet.published_at >= *published_after)
             .collect::<Vec<_>>();
-
-        println!("-----");
-
-        for item in &incoming_live_chat_messages {
-            println!(
-                "{}: {}",
-                item.author_details.display_name.as_str(),
-                item.snippet.display_message.as_str()
-            )
-        }
 
         for item in &incoming_live_chat_messages {
             let author = item.author_details.display_name.as_str();
