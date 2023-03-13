@@ -2,7 +2,7 @@ port module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, input, text)
-import Html.Attributes exposing (classList, placeholder, value)
+import Html.Attributes exposing (class, placeholder, value)
 import Html.Events exposing (onClick, onInput)
 import Url
 import Url.Parser exposing ((</>), s)
@@ -104,25 +104,26 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-    div []
+    div [ class "p-3" ]
         [ div []
             [ input
                 [ placeholder "Type your name"
                 , value model.yourName
                 , onInput YourNameChanged
-                , classList []
+                , class "rounded bg-transparent text-black border border-gray-400 text-gray-300 px-2 py-1"
                 ]
                 []
-            , button [ onClick Send ] [ text "Greet" ]
+            , button [ onClick Send, class "rounded bg-gray-600 border border-gray-500 text-gray-300 px-2 py-1 ml-2" ] [ text "Greet" ]
             ]
-        , div [] [ text model.message ]
+        , div [ class "text-gray-300 py-1" ] [ text model.message ]
         , div []
             [ input
                 [ placeholder "Type URL"
                 , value model.url
                 , onInput UrlChanged
+                , class "rounded bg-transparent text-black border border-gray-400 text-gray-300 px-2 py-1"
                 ]
                 []
             ]
-        , div [] [ text model.urlParseResult ]
+        , div [ class "text-gray-300 py-1" ] [ text model.urlParseResult ]
         ]

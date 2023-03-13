@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/tauri";
 
 import { Elm } from "./Main.elm";
 
+import "tailwindcss/tailwind.css";
+
 const app = Elm.Main.init({
   node: document.getElementById("root")!,
 });
