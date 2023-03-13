@@ -14,7 +14,7 @@
     "@tauri-apps/api": "^1.2.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "1.2.2",
+    "@tauri-apps/cli": "1.2.3",
     "elm": "0.19.1-5",
     "elm-format": "0.8.6",
     "typescript": "4.8.2",
